@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules
+
+# Optional npm cache directory
+.npm
+
+# npm package lock
+package-lock.json
+
+# Files created on Mac automatically
+.DS_Store
+
+# Folders containing compiled files.
+# CI/CD process ensures these are
+# built and deployed, so no need to
+# check it into source control.
+docs
+dist
+lib

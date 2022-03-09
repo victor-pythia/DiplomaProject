@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node text {
+            font: 8px sans-serif;
+        }
+
+        .link {
+            fill: none;
+            stroke-width: 2px;
+        }
+
+    </style>
+    <script src="../static/jquery.min.js"></script>
+
+</head>
+<body style="font-size: 20px; background-color: #404040;">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+
+<script>
+
+    var img = 0;
+
+    //Redraw for zoom
+    function redraw() {
+        //console.log("here", d3.event.translate, d3.event.scale);
+        svg.attr("transform",
+            "translate(" + d3.event.translate + ")"
+            + " scale(" + d3.event.scale + ")");
+    }
+
+    window.onload = function () {
+        $.get("/getarbore", function (r) {
+
+            ret = r.results;
+            // ************** Generate the tree diagram	 *****************
+            var margin = {top: 20, right: 120, bottom: 20, left: 120},
+                width = 1000 - margin.right - margin.left,
+                height = 2000 - margin.top - margin.bottom,
+                imgWidth = 100,
+                imgHeight = 100;
+
+            var i = 0,
+                duration = 750,
+                root;
+
+            var tree = d3.layout.tree()
+                .nodeSize([imgWidth, imgHeight]);
+
+            var diagonal = d3.svg.diagonal()
+                .projection(function (d) {
+                    return [d.x + imgWidth / 2, d.y + imgHeight / 2];
+                });
+            var svg = d3.select("body").append("svg").attr("width", 2000).attr("height", 2000)
+                .call(zm = d3.behavior.zoom().scaleExtent([-5, 7]).on("zoom", redraw)).append("g")
+                .attr("transform", "translate(" + height / 2 + "," + 20 + ")");
+
+            zm.translate([350, 20]);
+
+            var root = ret[0];
+            root.x0 = 0;
+            root.y0 = height / 2;
+            console.log(root)
+
+            root.children.forEach(collapse);
+            update(root);
+
+            d3.select(self.frameElement).style("height", "500px");
+
+
+            function update(source) {
+
+                // Compute the new tree layout.
+                var nodes = tree.nodes(root).reverse(),
+                    links = tree.links(nodes);
+
+                // Normalize for fixed-depth.
+                nodes.forEach(function (d) {
+                    d.y = d.depth * 200;
+                });
+
+                // Update the nodes…
+                var node = svg.selectAll("g.node")
+                    .data(nodes, function (d) {
+                        return d.id || (d.id = ++i);
+                    });
+
+                // Enter any new nodes at the parent's previous position.
+                var nodeEnter = node.enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", function (d) {
+                        return "translate(" + source.x0 + "," + source.y0 + ")";
+                    })
+                    .on("click", click);
+
+                nodeEnter.append("svg:image")
+                    .attr("xlink:href", function (d) {
+                        return d.img;
+                    })
+                    .attr('width', imgWidth)
+                    .attr('height', imgHeight);
+                //.attr('transform', 'translate(' + imgWidth + ',' + imgHeight + ')'); // imsize/2
+
+                nodeEnter.append("text")
+                    .attr("x", function (d) {
+                        return imgWidth / 2 - 40;
+                    })
+                    .attr("y", function (d) {
+                        return -imgHeight / 4 + 20;
+                    })
+                    .text(function (d) {
+                        return d.name;
+                    })
+                    .style("fill-opacity", 1e-6)
+                    .on("click", click);
+
+                // Transition nodes to their new position.
+                var nodeUpdate = node.transition()
+                    .duration(duration)
+                    .attr("transform", function (d) {
+                        return "translate(" + d.x + "," + d.y + ")";
+                    })
+                    .attr("height", function (d) {
+                        return d._children ? imgHeight + 50 : imgHeight
+                    })
+                    .attr("width", function (d) {
+                        return d._children ? imgHeight + 50 : imgHeight
+                    });
+
+                // nodeUpdate.select("circle")
+                //     .attr("r", 10)
+                //     .style("fill", function (d) {
+                //         return d._children ? "lightsteelblue" : "#fff";
+                //     });
+
+                nodeUpdate.select("text")
+                    .style("fill-opacity", 1);
+
+                // Transition exiting nodes to the parent's new position.
+                var nodeExit = node.exit().transition()
+                    .duration(duration)
+                    .attr("transform", function (d) {
+                        return "translate(" + source.x + "," + source.y + ")";
+                    })
+                    .remove();
+
+                nodeExit.select("text")
+                    .style("fill-opacity", 1e-6);
+
+                // Update the links…
+                var link = svg.selectAll("path.link")
+                    .data(links, function (d) {
+                        return d.target.id;
+                    });
+
+                // Enter any new links at the parent's previous position.
+                link.enter().insert("path", "g")
+                    .attr("class", "link")
+                    .attr("d", function (d) {
+                        var o = {x: source.x0, y: source.y0};
+                        return diagonal({source: o, target: o});
+                    })
+                    .attr("stroke", function (d) {
+                        console.log(d.target);
+                        return d.target._children ? "red" : "white"
+                    });
+
+                // Transition links to their new position.
+                link.transition()
+                    .duration(duration)
+                    .attr("d", diagonal);
+
+                // Transition exiting nodes to the parent's new position.
+                link.exit().transition()
+                    .duration(duration)
+                    .attr("d", function (d) {
+                        var o = {x: source.x, y: source.y};
+                        return diagonal({source: o, target: o});
+                    })
+                    .remove();
+
+                // Stash the old positions for transition.
+                nodes.forEach(function (d) {
+                    d.x0 = d.x;
+                    d.y0 = d.y;
+                });
+            }
+
+            // Toggle children on click.
+            function click(d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                } else {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                update(d);
+            }
+
+            //Redraw for zoom
+            function redraw() {
+                //console.log("here", d3.event.translate, d3.event.scale);
+                svg.attr("transform",
+                    "translate(" + d3.event.translate + ")"
+                    + " scale(" + d3.event.scale + ")");
+            }
+
+            function collapse(d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d._children.forEach(collapse);
+                    d.children = null;
+                }
+            }
+
+            function expand(d) {
+                var children = (d.children) ? d.children : d._children;
+                if (d._children) {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                if (children)
+                    children.forEach(expand);
+            }
+
+            function expandAll() {
+                expand(root);
+                update(root);
+            }
+
+            function collapseAll() {
+                root.children.forEach(collapse);
+                collapse(root);
+                update(root);
+            }
+
+            function change(e) {
+                if (e.code === 'KeyE') {
+                    expandAll();
+                } else if (e.code === 'KeyC') {
+                    collapseAll();
+                }
+            }
+
+            document.addEventListener('keypress', change);
+
+
+        });
+
+    }
+
+
+</script>
+</body>
+</html>

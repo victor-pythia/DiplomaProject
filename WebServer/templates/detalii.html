@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+
+    <title>LICENTA</title>
+
+    <link href="../static/chessboard.min.css" rel="stylesheet" type="text/css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="../static/jquery.min.js"></script>
+    <script src="../static/chessboard.min.js"></script>
+    <script src="../static/utile.js"></script>
+
+</head>
+<body style="font-size: 20px; background-color: #404040;">
+
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">LICENTA</a>
+        </div>
+        <ul class="nav navbar-nav">
+            <li><a href="javascript:newGame();" onclick="newGame()">Joc Nou</a></li>
+            <li><a href="/selfplay">Demo</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="sidenav">
+    <a href="{{url_for('detalii')}}">Detalii model</a>
+    <button class="dropdown-btn">Incarca model
+        <i class="fa fa-caret-down"></i>
+    </button>
+    <div class="dropdown-container">
+        {%for name in names%}
+            <a href="#">{{name}}</a>
+        {%endfor%}
+    </div>
+</div>
+
+<script type="text/javascript">
+
+</script>
+<div class="content">
+    <div class="jos">
+        <article>
+            <p>
+    A bunch of completely random games are played. The value net learns that just counting black stones and white stones correlates with who wins. MCTS is also probably good enough to figure out that if black passes early, then white will also pass to end the game and win by komi, at least according to Tromp-Taylor rules. The antreneaza data thus lacks any passes, and the policy network learns not to pass.
+    MCTS starts to figure out that capture is a good move, because the value net has learned to count stones -> the policy network starts to capture stones. Simultaneously, the value net starts to learn that spots surrounded by stones of one color can be considered to belong to that color.
+</p>
+        </article>
+        <article>
+            <p>asdasdasd</p>
+        </article>
+    </div>
+</div>
+
+
+</body>
+</html>

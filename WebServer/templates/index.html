@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+
+    <title>LICENTA</title>
+
+    <link href="../static/chessboard.min.css" rel="stylesheet" type="text/css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="../static/jquery.min.js"></script>
+    <script src="../static/chessboard.min.js"></script>
+    <script src="../static/utile.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+</head>
+<body style="font-size: 20px; background-color: #404040;">
+
+<!--    TOPNAV-->
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">LICENTA</a>
+        </div>
+        <ul class="nav navbar-nav">
+            <li><a href="javascript:newGame();" onclick="newGame()">Joc Nou</a></li>
+            <li><a href="/selfplay">Demo</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!--    SIDENAV-->
+<div class="sidenav">
+    <a href="{{url_for('detalii')}}">Detalii model</a>
+    <a href="{{url_for('test')}}">Arbore MC</a>
+    <button class="dropdown-btn">Incarca model
+        <i class="fa fa-caret-down"></i>
+    </button>
+    <div class="dropdown-container">
+        {%for name in names%}
+        <a href="#">{{name}}</a>
+        {%endfor%}
+    </div>
+</div>
+
+<!--    TABLA-->
+<div class="content">
+    <div id="board" style="width: 600px"></div>
+</div>
+<script type="text/javascript">
+    var dropdown = document.getElementsByClassName("dropdown-btn");
+    var i;
+    for (i = 0; i < dropdown.length; i++) {
+        dropdown[i].addEventListener("click", function () {
+            this.classList.toggle("active");
+            var dropdownContent = this.nextElementSibling;
+            if (dropdownContent.style.display === "block") {
+                dropdownContent.style.display = "none";
+            } else {
+                dropdownContent.style.display = "block";
+            }
+        });
+    }
+
+
+    var board = ChessBoard('board', {
+        position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        draggable: true,
+        onDrop: onDrop
+    });
+
+    var files = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7};
+
+    function get_square(sq) {
+        return 8 * (parseInt(sq.charAt(1)) - 1) + files[sq.charAt(0)];
+    }
+
+    var w = 900;
+    var h = 500;
+
+    function onDrop(source, target, piece) {
+        if (source === target) return
+        var promotion = piece.toLowerCase().charAt(1) === 'p' && parseInt(target.charAt(1)) === 8;
+
+        $.get('/move_coordinates', {'deUnde': get_square(source), 'panaUnde': get_square(target), 'promovare': promotion},
+            function (r) {
+                response = r.response;
+                status = r.status;
+                fens = r.fens;
+                vals = r.vals;
+                treeData = r.arbore;
+                update(2)
+                d3.select("#tree").on("click", function (d, i) {
+                    update(2)
+                });
+
+                function update(type) {
+
+                    d3.select("svg")
+                        .remove();
+
+                    // Create a svg canvas
+                    var vis = d3.select("#viz").append("svg:svg")
+                        .attr("width", w)
+                        .attr("height", h)
+                        .append("svg:g")
+                        .attr("transform", "translate(60, 0)");
+
+
+                    if (type === 1)
+                        var layout = d3.layout.cluster().size([h, w - 100]);
+                    else
+                        var layout = d3.layout.tree().size([h, w - 100]);
+
+                    var diagonal = d3.svg.diagonal()
+                        // change x and y (for the left to right tree)
+                        .projection(function (d) {
+                            return [d.y, d.x];
+                        });
+
+                    // Preparing the data for the tree layout, convert data into an array of nodes
+                    var nodes = layout.nodes(treeData);
+                    // Create an array with all the links
+                    var links = layout.links(nodes);
+
+                    var link = vis.selectAll("pathlink")
+                        .data(links)
+                        .enter().append("svg:path")
+                        .attr("class", "link")
+                        .attr("d", diagonal)
+
+                    var node = vis.selectAll("g.node")
+                        .data(nodes)
+                        .enter().append("svg:g")
+                        .attr("transform", function (d) {
+                            return "translate(" + d.y + "," + d.x + ")";
+                        })
+
+                    // Add the dot at every node
+                    node.append("svg:circle")
+                        .attr("r", 1.5);
+
+                    // place the name attribute left or right depending if children
+                    node.append("svg:text")
+                        .attr("dx", function (d) {
+                            return d.children ? -8 : 8;
+                        })
+                        .attr("dy", 3)
+                        .attr("text-anchor", function (d) {
+                            return d.children ? "end" : "start";
+                        })
+                        .text(function (d) {
+                            return d.name;
+                        });
+                }
+
+                if (document.getElementById('pot1').hidden) {
+                    document.getElementById('pot1').hidden = false;
+                    document.getElementById('pot2').hidden = false;
+                    document.getElementById('pot3').hidden = false;
+                }
+                if (response.includes("game over")) {
+                    document.getElementById('info').innerText = 'game over';
+                } else {
+                    document.getElementById('info').innerText = response;
+                    if(fens) {
+                        document.getElementById('pot1').src = "data:image/svg+xml;base64," + fens[0];
+                        document.getElementById('pot2').src = "data:image/svg+xml;base64," + fens[1];
+                        document.getElementById('pot3').src = "data:image/svg+xml;base64," + fens[2];
+                        document.getElementById('val1').innerText = parseFloat(vals[0]).toFixed(3);
+                        document.getElementById('val2').innerText = parseFloat(vals[1]).toFixed(3);
+                        document.getElementById('val3').innerText = parseFloat(vals[2]).toFixed(3);
+                    }
+                    if(status !== 201)
+                        board.position(response);
+                    }
+            });
+    }
+</script>
+
+<div class="content">
+    <div class="jos">
+        <p id="info" style="color: blanchedalmond"></p>
+        <h2 style="color: blanchedalmond">Cele mai bune 3 mutari:</h2>
+        <div class="row">
+            <div class="column">
+                <img height="200px" hidden="true" id="pot1" width="200px">
+                <p id="val1" style="color: blanchedalmond"></p>
+            </div>
+            <div class="column">
+                <img height="200px" hidden="true" id="pot2" width="200px">
+                <p id="val2" style="color: blanchedalmond"></p>
+            </div>
+            <div class="column">
+                <img height="200px" hidden="true" id="pot3" width="200px">
+                <p id="val3" style="color: blanchedalmond"></p>
+            </div>
+        </div>
+    </div>
+    <div id="tree" style="width: 100px; height: 100px">
+
+    </div>
+</div>
+
+
+</body>
+</html>

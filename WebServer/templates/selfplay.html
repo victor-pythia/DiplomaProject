@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+
+    <title>LICENTA</title>
+
+    <link href="../static/chessboard.min.css" rel="stylesheet" type="text/css">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="../static/jquery.min.js"></script>
+    <script src="../static/chessboard.min.js"></script>
+    <script src="../static/utile.js"></script>
+
+
+</head>
+<body style="font-size: 20px; background-color: #404040;">
+
+<!--    TOPNAV-->
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">LICENTA</a>
+        </div>
+        <ul class="nav navbar-nav">
+            <li><a href="javascript:newGame();" onclick="newGame()">Joc Nou</a></li>
+            <li><a href="/selfplay">Demo</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!--    SIDENAV-->
+<div class="sidenav">
+    <a href="{{url_for('detalii')}}">Detalii model</a>
+    <a href="{{url_for('test')}}">Arbore MC</a>
+    <button class="dropdown-btn">Incarca model
+        <i class="fa fa-caret-down"></i>
+    </button>
+    <div class="dropdown-container">
+        {%for name in names%}
+        <a href="#">{{name}}</a>
+        {%endfor%}
+    </div>
+</div>
+
+<div class="content">
+    <div id="board" style="width: 600px"></div>
+</div>
+
+<script type="text/javascript">
+    var board = ChessBoard('board', {
+        position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        draggable: true,
+        onDrop: onDrop
+    });
+    function onDrop(source, target, piece) {
+        if (source === target) return
+        board.position(response);
+    }
+    var idx = 0;
+    var fens = [];
+
+    $.get('/getactions', function(r) {
+        fens = r.results;
+        console.log(fens);
+        board.position(fens[0])
+    });
+
+    function prev(){
+        if(idx>0)
+            board.position(fens[idx--]);
+        else idx = 0;
+    }
+    function next(){
+        if(idx < fens.length - 1)
+            board.position(fens[idx++]);
+        else idx = fens.length - 1;
+    }
+
+    // $.get('/getimages', function(r) {
+    //     imagini = r.results;
+    //     document.querySelector('img').src = "data:image/svg+xml;base64," + imagini[0];
+    // });
+
+    // function prev(){
+    //     if(idx>0)
+    //         document.querySelector('img').src = "data:image/svg+xml;base64," + imagini[idx--];
+    //     else idx = 0;
+    // }
+    // function next(){
+    //     if(idx < imagini.length - 1)
+    //         document.querySelector('img').src = "data:image/svg+xml;base64," + imagini[idx++];
+    //     else idx = imagini.length - 1;
+    // }
+
+</script>
+    <div class="content">
+    <!--    <div>-->
+    <!--        <img width=600 height=600 src="">-->
+    <!--    </div>-->
+        <div>
+            <img width=5% height=5% id="prev" src="../static/img/prev.png" onclick="prev()">
+            <img width=5% height=5% id="next" src="../static/img/next.png" onclick="next()">
+        </div>
+
+    </div>
+
+</body>
+</html>
